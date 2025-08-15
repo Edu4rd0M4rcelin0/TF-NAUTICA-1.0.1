@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TF Náutica</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap');
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: linear-gradient(to right, #e0f7fa, #ffffff);
+            margin: 0;
+            padding: 30px;
+            display: flex;
+            justify-content: center;
+        }
+        .container {
+            background: #ffffff;
+            padding: 40px;
+            border-radius: 18px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+            width: 100%;
+            max-width: 850px;
+        }
+        h2 {
+            text-align: center;
+            color: #006d8f;
+            font-size: 30px;
+            margin-bottom: 30px;
+            font-weight: 700;
+        }
+        label {
+            font-weight: 500;
+            margin-top: 15px;
+            display: block;
+            color: #004d66;
+            font-size: 15px;
+        }
+        input, textarea, select {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1px solid #b2dfdb;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-size: 15px;
+            transition: border-color 0.3s;
+        }
+        input:focus, textarea:focus, select:focus {
+            border-color: #007a99;
+            outline: none;
+        }
+        button {
+            background: #007a99;
+            color: #fff;
+            border: none;
+            padding: 14px;
+            cursor: pointer;
+            border-radius: 10px;
+            width: 100%;
+            margin-top: 10px;
+            font-weight: 600;
+            font-size: 16px;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background: #005c73;
+        }
+        .produto-item {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 14px;
+        }
+        .produto-item input, .produto-item select {
+            flex: 1;
+            min-width: 100px;
+        }
+        .remove-btn {
+            background: #cc0000;
+            border: none;
+            font-size: 14px;
+            color: white;
+            cursor: pointer;
+            border-radius: 6px;
+            width: 30px;
+            height: 30px;
+            padding: 0;
+        }
+        .remove-btn:hover {
+            background: #990000;
+        }
+        .btn-add {
+            background: #00b386;
+        }
+        .btn-add:hover {
+            background: #009973;
+        }
+        .logo {
+            display: block;
+            margin-left: auto;
+            margin-right: 0;
+            max-width: 250px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <img src="https://i.ibb.co/bMKyTYd1/logo.png" alt="Logo TF Náutica" class="logo">
+        <form id="formOrcamento" onsubmit="event.preventDefault(); gerarPDF();">
+            <label>Cliente:</label>
+            <input type="text" id="clienteNome" required>
+
+            <label>Nome da Embarcação:</label>
+            <input type="text" id="embarcacao" required>
+
+            <h3 style="color:#006d8f; margin-top: 25px;">Produtos</h3>
+            <div id="produtos"></div>
+            <button type="button" class="btn-add" onclick="adicionarProduto()">Adicionar Produto</button>
+
+            <label>Observações:</label>
+            <textarea id="observacoes" rows="4"></textarea>
+
+            <button type="submit">Gerar PDF</button>
+        </form>
+    </div>
+
+    <script>
+        function adicionarProduto(nome = "") {
+            const container = document.getElementById("produtos");
+            const div = document.createElement("div");
+            div.className = "produto-item";
+            div.innerHTML = `
+                <input type="text" placeholder="Produto" value="${nome}" required>
+                <input type="number" placeholder="Quantidade" required value="1">
+                <input type="number" placeholder="Preço (R$)" required step="0.01" value="0.00">
+                <button type="button" class="remove-btn" onclick="this.parentNode.remove()">X</button>
+            `;
+            container.appendChild(div);
+        }
+
+        async function gerarPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            const logoUrl = "https://i.ibb.co/bMKyTYd1/logo.png";
+            const logo = await loadImage(logoUrl);
+
+            const clienteNome = document.getElementById("clienteNome").value;
+            const embarcacao = document.getElementById("embarcacao").value;
+            const observacoes = document.getElementById("observacoes").value;
+
+            const produtos = Array.from(document.querySelectorAll("#produtos .produto-item")).map(item => {
+                const [nome, qtd, preco] = item.querySelectorAll("input");
+                return {
+                    nome: nome.value,
+                    qtd: parseFloat(qtd.value),
+                    preco: parseFloat(preco.value),
+                    total: parseFloat(qtd.value) * parseFloat(preco.value)
+                };
+            });
+
+            let totalGeral = produtos.reduce((sum, p) => sum + p.total, 0);
+
+            if (logo) {
+                doc.addImage(logo, "PNG", 150, 10, 50, 25);
+            }
+
+            doc.setTextColor(0, 77, 102);
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(20);
+            doc.text("TF Náutica", 105, 20, { align: "center" });
+            doc.setFontSize(12);
+            doc.text("Elétrica e Acessorios Náutica", 105, 26, { align: "center" });
+            doc.text("CNPJ 30.419.403/0001-30", 105, 32, { align: "center" });
+            doc.text("Rua Cristóvão Jacques N: 119 Campo Grande - Recife - PE", 105, 38, { align: "center" });
+            doc.text("Fone: (81) 99858 - 2920", 105, 44, { align: "center" });
+
+            doc.setFontSize(12);
+            doc.setTextColor(0, 77, 102);
+            doc.text("Dados do Cliente", 14, 60);
+            doc.setFontSize(10);
+            doc.setTextColor(0);
+            doc.text(`Cliente: ${clienteNome}`, 14, 67);
+            doc.text(`Nome da Embarcação: ${embarcacao}`, 14, 73);
+
+            doc.autoTable({
+                startY: 83,
+                head: [["Produto", "Quantidade", "Preço Unitário (R$)", "Subtotal (R$)"]],
+                body: produtos.map(p => [
+                    p.nome,
+                    p.qtd,
+                    p.preco.toFixed(2),
+                    p.total.toFixed(2)
+                ]),
+                styles: {
+                    fontSize: 10,
+                    halign: "center",
+                    lineColor: [0, 100, 130],
+                    lineWidth: 0.3,
+                    cellPadding: 4,
+                },
+                headStyles: {
+                    fillColor: [0, 122, 153],
+                    textColor: [255, 255, 255],
+                    fontStyle: "bold"
+                },
+                alternateRowStyles: {
+                    fillColor: [245, 252, 255]
+                },
+                theme: "grid"
+            });
+
+            const finalY = (doc.lastAutoTable && doc.lastAutoTable.finalY) || 100;
+
+            doc.setFontSize(12);
+            doc.setFont("helvetica", "bold");
+            doc.text(`Total: R$ ${totalGeral.toFixed(2)}`, 14, finalY + 10);
+
+            doc.setFontSize(10);
+            doc.setFont("helvetica", "normal");
+            doc.text(`Data: ${new Date().toLocaleDateString()}`, 14, finalY + 16);
+            doc.text("Trabalhamos Apenas Com Peças Originais!", 14, finalY + 22);
+
+            if (observacoes.trim() !== "") {
+                doc.setFontSize(10);
+                doc.text("Observações:", 14, finalY + 32);
+                doc.text(doc.splitTextToSize(observacoes, 180), 14, finalY + 38);
+            }
+
+            doc.setFontSize(9);
+            doc.setTextColor(100);
+            doc.text("TF Náutica Agradece Sua Solicitação. Navegar é Preciso Qualidade!", 105, 290, { align: "center" });
+
+            doc.save(`orcamento_${Date.now()}.pdf`);
+        }
+
+        function loadImage(url) {
+            return new Promise(resolve => {
+                const img = new Image();
+                img.crossOrigin = "Anonymous";
+                img.onload = () => {
+                    const canvas = document.createElement("canvas");
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    const ctx = canvas.getContext("2d");
+                    ctx.drawImage(img, 0, 0);
+                    resolve(canvas.toDataURL("image/png"));
+                };
+                img.onerror = () => resolve(null);
+                img.src = url;
+            });
+        }
+    </script>
+</body>
+</html>
